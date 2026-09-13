@@ -1,38 +1,51 @@
 # Dynamic Memory Allocation Simulator
 
-A C++ console-based simulator that demonstrates dynamic memory allocation
-and memory management techniques.
+A C++ console-based simulator with an interactive HTML/JavaScript GUI for demonstrating dynamic memory allocation and memory management concepts.
 
 ## Features
 
 - First-Fit memory allocation
 - Best-Fit memory allocation
+- Dynamic memory block splitting
 - Memory deallocation
-- Automatic splitting of memory blocks
-- Merging of adjacent free blocks
-- Memory map visualization
-- Fragmentation information
+- Automatic merging of adjacent free blocks (coalescing)
+- Visual memory map
+- Memory block table with addresses, sizes, and status
+- Fragmentation statistics
+- Console activity log
 
-## Concepts Used
+## Memory Allocation Techniques
 
-- Dynamic memory allocation
-- Linked lists
-- Pointers
-- Classes and objects
-- First-Fit allocation
-- Best-Fit allocation
-- Memory fragmentation
+### First-Fit
 
-## How to Run
+First-Fit searches the memory blocks from the beginning and allocates the process to the first free block that is large enough.
 
-Compile using:
+### Best-Fit
 
-g++ memory_allocator.cpp -o memory_allocator
+Best-Fit searches all available free blocks and allocates the process to the smallest free block that can satisfy the requested size.
 
-Run using:
+## Memory Management
 
-./memory_allocator
+When a block is larger than the requested size, the simulator splits the block into an allocated block and a remaining free block.
 
-## Author
+When memory is freed, adjacent free blocks are merged together to reduce fragmentation.
 
-Akshay
+## Fragmentation
+
+The simulator displays:
+
+- Total free memory
+- Total used memory
+- Number of free blocks
+
+A larger number of separated free blocks indicates greater external fragmentation.
+
+## Project Structure
+
+```text
+Dynamic-Memory-Allocation-Simulator/
+│
+├── memory_allocator.cpp
+├── memory_allocator_gui.html
+├── README.md
+└── .gitignore
