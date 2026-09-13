@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dynamic Memory Allocation Simulator</title>
+<style>
+  :root{
+    --bg: #0a0e14;
+    --panel: #10161f;
+    --grid: #182131;
+    --amber: #ffb300;
+    --amber-dim: #7a5c12;
+    --cyan: #4fd6d6;
+    --text: #d8e0ea;
+    --muted: #6b7686;
+    --free: #1b2432;
+    --danger: #ff5d5d;
+    --ok: #6fd67a;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      linear-gradient(var(--grid) 1px, transparent 1px) 0 0/100% 28px,
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0/28px 100%,
+      var(--bg);
+    color:var(--text);
+    font-family: 'Courier New', ui-monospace, monospace;
+    padding:20px;
+  }
+  .wrap{max-width:1100px;margin:0 auto;}
+  header{
+    border-bottom: 1px solid var(--amber-dim);
+    padding-bottom:14px;
+    margin-bottom:20px;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    flex-wrap:wrap;
+    gap:10px;
+  }
+  h1{
+    font-size:1.4rem;
+    letter-spacing:1px;
+    margin:0;
+    color:var(--amber);
+    text-transform:uppercase;
+  }
+  header .sub{color:var(--muted);font-size:0.8rem;}
+  .badge{
+    font-size:0.7rem;
+    color:var(--cyan);
+    border:1px solid var(--cyan);
+    padding:3px 8px;
+    border-radius:2px;
+    letter-spacing:1px;
+  }
+  .panel{
+    background:var(--panel);
+    border:1px solid #1e2836;
+    border-radius:4px;
+    padding:16px;
+    margin-bottom:18px;
+  }
+  .panel h2{
+    font-size:0.75rem;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin:0 0 12px 0;
+    border-left:3px solid var(--amber);
+    padding-left:8px;
+  }
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;}
+  .field{display:flex;flex-direction:column;gap:4px;}
+  label{font-size:0.7rem;color:var(--muted);}
+  input, select{
+    background:#0d1420;
+    border:1px solid #26344a;
+    color:var(--text);
+    padding:7px 9px;
+    border-radius:3px;
+    font-family:inherit;
+    font-size:0.85rem;
+    width:130px;
+  }
+  input:focus, select:focus{outline:1px solid var(--amber);}
+  button{
+    background:transparent;
+    border:1px solid var(--amber);
+    color:var(--amber);
+    padding:8px 14px;
+    border-radius:3px;
+    cursor:pointer;
+    font-family:inherit;
+    font-size:0.8rem;
+    letter-spacing:0.5px;
+    transition:background 0.15s, color 0.15s;
+  }
+  button:hover{background:var(--amber);color:#0a0e14;}
+  button.secondary{border-color:var(--cyan);color:var(--cyan);}
+  button.secondary:hover{background:var(--cyan);color:#0a0e14;}
+  button.danger{border-color:var(--danger);color:var(--danger);}
+  button.danger:hover{background:var(--danger);color:#0a0e14;}
+  button:disabled{opacity:0.35;cursor:not-allowed;}
+  button:disabled:hover{background:transparent;color:inherit;}
+
+  #memBar{
+    display:flex;
+    width:100%;
+    height:70px;
+    border:1px solid #26344a;
+    border-radius:3px;
+    overflow:hidden;
+  }
+  .block{
+    position:relative;
+    height:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:0.65rem;
+    border-right:1px solid #0a0e14;
+    cursor:default;
+    transition:filter 0.15s;
+  }
+  .block:last-child{border-right:none;}
+  .block:hover{filter:brightness(1.25);}
+  .block.free{
+    background: repeating-linear-gradient(45deg, var(--free), var(--free) 6px, #141c29 6px, #141c29 12px);
+    color:var(--muted);
+  }
+  .block .lbl{pointer-events:none;text-align:center;line-height:1.3;}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:0.7rem;color:var(--muted);}
+  .legend .sw{display:inline-block;width:10px;height:10px;margin-right:5px;border-radius:2px;vertical-align:middle;}
+
+  #tableWrap{overflow-x:auto;margin-top:14px;}
+  table{width:100%;border-collapse:collapse;font-size:0.78rem;}
+  th,td{padding:6px 10px;text-align:left;border-bottom:1px solid #1e2836;}
+  th{color:var(--muted);font-weight:normal;text-transform:uppercase;font-size:0.65rem;letter-spacing:1px;}
+  td.free-cell{color:var(--muted);}
+  td.used-cell{color:var(--amber);}
+
+  #log{
+    background:#080b11;
+    border:1px solid #1e2836;
+    border-radius:3px;
+    padding:10px 12px;
+    height:160px;
+    overflow-y:auto;
+    font-size:0.78rem;
+    line-height:1.5;
+  }
+  #log div{white-space:pre-wrap;}
+  #log .ok{color:var(--ok);}
+  #log .err{color:var(--danger);}
+  #log .info{color:var(--cyan);}
+  #log .sys{color:var(--muted);}
+
+  .stats{display:flex;gap:26px;flex-wrap:wrap;}
+  .stat{min-width:150px;}
+  .stat .n{font-size:1.4rem;color:var(--amber);}
+  .stat .l{font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+
+  footer{color:var(--muted);font-size:0.7rem;text-align:center;margin-top:20px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <h1>Dynamic Memory Allocation Simulator</h1>
+      <div class="sub">Free-list allocator &mdash; First-Fit / Best-Fit &mdash; Coalescing</div>
+    </div>
+    <div class="badge">C++ LOGIC &middot; GUI BUILD</div>
+  </header>
+
+  <div class="panel">
+    <h2>01 &middot; Initialize Memory</h2>
+    <div class="row">
+      <div class="field">
+        <label for="totalSize">Total Memory (units)</label>
+        <input id="totalSize" type="number" value="1000" min="1">
+      </div>
+      <button id="initBtn">Initialize / Reset</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>02 &middot; Allocate Memory</h2>
+    <div class="row">
+      <div class="field">
+        <label for="allocPid">Process ID</label>
+        <input id="allocPid" type="number" min="0" placeholder="e.g. 1">
+      </div>
+      <div class="field">
+        <label for="allocSize">Size Required</label>
+        <input id="allocSize" type="number" min="1" placeholder="e.g. 120">
+      </div>
+      <button id="firstFitBtn">Allocate (First-Fit)</button>
+      <button id="bestFitBtn" class="secondary">Allocate (Best-Fit)</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>03 &middot; Free Memory</h2>
+    <div class="row">
+      <div class="field">
+        <label for="freePid">Process ID</label>
+        <input id="freePid" type="number" min="0" placeholder="e.g. 1">
+      </div>
+      <button id="freeBtn" class="danger">Free &amp; Coalesce</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Memory Map</h2>
+    <div id="memBar"></div>
+    <div class="legend" id="legend"></div>
+    <div id="tableWrap">
+      <table>
+        <thead><tr><th>Start Addr</th><th>Size</th><th>Status</th></tr></thead>
+        <tbody id="tblBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Fragmentation</h2>
+    <div class="stats">
+      <div class="stat"><div class="n" id="statFree">-</div><div class="l">Total Free Units</div></div>
+      <div class="stat"><div class="n" id="statUsed">-</div><div class="l">Total Used Units</div></div>
+      <div class="stat"><div class="n" id="statBlocks">-</div><div class="l">Free Blocks Count</div></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Console Log</h2>
+    <div id="log"></div>
+  </div>
+
+  <footer>Same allocation algorithms as the original C++ console program &mdash; First-Fit, Best-Fit, block splitting, and adjacent free-block coalescing.</footer>
+</div>
+
+<script>
+/* ---------- Core allocator logic (mirrors the C++ Block / MemoryManager classes) ---------- */
+
+class Block {
+  constructor(start, size, isFree, processId = -1){
+    this.startAddress = start;
+    this.size = size;
+    this.isFree = isFree;
+    this.processId = processId;
+  }
+}
+
+class MemoryManager {
+  constructor(totalSize){
+    this.totalMemory = totalSize;
+    this.blocks = [ new Block(0, totalSize, true) ]; // ordered list == linked list
+  }
+
+  allocateFirstFit(size, pid){
+    if(size <= 0) return {ok:false, msg:"Allocation Failed! Requested size must be greater than 0."};
+    if(pid < 0) return {ok:false, msg:"Allocation Failed! Invalid process ID."};
+
+    for(let i=0;i<this.blocks.length;i++){
+      const b = this.blocks[i];
+      if(b.isFree && b.size >= size){
+        this.splitBlock(i, size, pid);
+        return {ok:true, msg:`Allocated ${size} units to Process ${pid} using FIRST-FIT at address ${b.startAddress}`};
+      }
+    }
+    return {ok:false, msg:"Allocation Failed! No suitable block found (First-Fit)."};
+  }
+
+  allocateBestFit(size, pid){
+    if(size <= 0) return {ok:false, msg:"Allocation Failed! Requested size must be greater than 0."};
+    if(pid < 0) return {ok:false, msg:"Allocation Failed! Invalid process ID."};
+
+    let bestIdx = -1;
+    for(let i=0;i<this.blocks.length;i++){
+      const b = this.blocks[i];
+      if(b.isFree && b.size >= size){
+        if(bestIdx === -1 || b.size < this.blocks[bestIdx].size) bestIdx = i;
+      }
+    }
+    if(bestIdx !== -1){
+      const addr = this.blocks[bestIdx].startAddress;
+      this.splitBlock(bestIdx, size, pid);
+      return {ok:true, msg:`Allocated ${size} units to Process ${pid} using BEST-FIT at address ${addr}`};
+    }
+    return {ok:false, msg:"Allocation Failed! No suitable block found (Best-Fit)."};
+  }
+
+  splitBlock(index, size, pid){
+    const block = this.blocks[index];
+    if(block.size > size){
+      const newBlock = new Block(block.startAddress + size, block.size - size, true);
+      this.blocks.splice(index+1, 0, newBlock);
+    }
+    block.size = size;
+    block.isFree = false;
+    block.processId = pid;
+  }
+
+  freeMemory(pid){
+    if(pid < 0) return {ok:false, msg:"Process ID must be non-negative."};
+
+    let found = false;
+    for(const b of this.blocks){
+      if(!b.isFree && b.processId === pid){
+        b.isFree = true;
+        b.processId = -1;
+        found = true;
+        break;
+      }
+    }
+    if(!found) return {ok:false, msg:`Process ${pid} not found in memory.`};
+
+    this.mergeFreeBlocks();
+    return {ok:true, msg:`Freed memory of Process ${pid}`};
+  }
+
+  mergeFreeBlocks(){
+    let i = 0;
+    while(i < this.blocks.length - 1){
+      const cur = this.blocks[i];
+      const nxt = this.blocks[i+1];
+      if(cur.isFree && nxt.isFree){
+        cur.size += nxt.size;
+        this.blocks.splice(i+1, 1);
+      } else {
+        i++;
+      }
+    }
+  }
+
+  fragmentation(){
+    let freeBlocks = 0, totalFree = 0, totalUsed = 0;
+    for(const b of this.blocks){
+      if(b.isFree){ freeBlocks++; totalFree += b.size; }
+      else totalUsed += b.size;
+    }
+    return {freeBlocks, totalFree, totalUsed};
+  }
+}
+
+/* ---------- GUI wiring ---------- */
+
+let mgr = null;
+
+const memBar = document.getElementById('memBar');
+const legend = document.getElementById('legend');
+const tblBody = document.getElementById('tblBody');
+const logEl = document.getElementById('log');
+const statFree = document.getElementById('statFree');
+const statUsed = document.getElementById('statUsed');
+const statBlocks = document.getElementById('statBlocks');
+
+const controlButtons = ['firstFitBtn','bestFitBtn','freeBtn'].map(id => document.getElementById(id));
+
+function log(msg, cls='sys'){
+  const line = document.createElement('div');
+  line.className = cls;
+  line.textContent = '> ' + msg;
+  logEl.appendChild(line);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function pidColor(pid){
+  // deterministic hue from pid so the same process always gets the same color
+  const hue = (pid * 47) % 360;
+  return `hsl(${hue}, 55%, 42%)`;
+}
+
+function setControlsEnabled(enabled){
+  controlButtons.forEach(b => b.disabled = !enabled);
+}
+
+function render(){
+  memBar.innerHTML = '';
+  tblBody.innerHTML = '';
+  legend.innerHTML = '';
+
+  if(!mgr){
+    statFree.textContent = '-';
+    statUsed.textContent = '-';
+    statBlocks.textContent = '-';
+    return;
+  }
+
+  const usedPids = new Set();
+
+  mgr.blocks.forEach(b => {
+    const pct = (b.size / mgr.totalMemory) * 100;
+    const div = document.createElement('div');
+    div.className = 'block' + (b.isFree ? ' free' : '');
+    div.style.width = pct + '%';
+    if(!b.isFree){
+      div.style.background = pidColor(b.processId);
+      div.style.color = '#fff';
+      usedPids.add(b.processId);
+    }
+    div.title = `Addr ${b.startAddress} | Size ${b.size} | ${b.isFree ? 'FREE' : 'P'+b.processId}`;
+    const lbl = document.createElement('div');
+    lbl.className = 'lbl';
+    lbl.textContent = b.isFree ? 'FREE' : `P${b.processId}`;
+    div.appendChild(lbl);
+    memBar.appendChild(div);
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${b.startAddress}</td><td>${b.size}</td><td class="${b.isFree?'free-cell':'used-cell'}">${b.isFree ? 'FREE' : 'USED by P'+b.processId}</td>`;
+    tblBody.appendChild(tr);
+  });
+
+  usedPids.forEach(pid => {
+    const item = document.createElement('span');
+    const sw = document.createElement('span');
+    sw.className = 'sw';
+    sw.style.background = pidColor(pid);
+    item.appendChild(sw);
+    item.append(`Process ${pid}`);
+    legend.appendChild(item);
+  });
+  if(usedPids.size === 0){
+    legend.textContent = 'No processes currently allocated.';
+  }
+
+  const frag = mgr.fragmentation();
+  statFree.textContent = frag.totalFree;
+  statUsed.textContent = frag.totalUsed;
+  statBlocks.textContent = frag.freeBlocks;
+}
+
+document.getElementById('initBtn').addEventListener('click', () => {
+  const totalSize = parseInt(document.getElementById('totalSize').value, 10);
+  if(!totalSize || totalSize <= 0){
+    log('Invalid total memory size. Exiting.', 'err');
+    return;
+  }
+  mgr = new MemoryManager(totalSize);
+  setControlsEnabled(true);
+  logEl.innerHTML = '';
+  log(`Memory initialized with ${totalSize} units.`, 'info');
+  render();
+});
+
+document.getElementById('firstFitBtn').addEventListener('click', () => {
+  const pid = parseInt(document.getElementById('allocPid').value, 10);
+  const size = parseInt(document.getElementById('allocSize').value, 10);
+  const res = mgr.allocateFirstFit(size, pid);
+  log(res.msg, res.ok ? 'ok' : 'err');
+  render();
+});
+
+document.getElementById('bestFitBtn').addEventListener('click', () => {
+  const pid = parseInt(document.getElementById('allocPid').value, 10);
+  const size = parseInt(document.getElementById('allocSize').value, 10);
+  const res = mgr.allocateBestFit(size, pid);
+  log(res.msg, res.ok ? 'ok' : 'err');
+  render();
+});
+
+document.getElementById('freeBtn').addEventListener('click', () => {
+  const pid = parseInt(document.getElementById('freePid').value, 10);
+  const res = mgr.freeMemory(pid);
+  log(res.msg, res.ok ? 'ok' : 'err');
+  render();
+});
+
+setControlsEnabled(false);
+render();
+</script>
+</body>
+</html>
